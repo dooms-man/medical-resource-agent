@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+.env/
+
+# VSCode
+.vscode/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Generated data
+data/processed/faiss_index/
+data/processed/allocation_plan.csv
+data/processed/forecast_alerts.csv
+data/processed/feedback.json
+data/processed/ml_default_weights.json
+
+# Logs
+*.log

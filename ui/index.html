@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Medical Resource Agent • Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <style>
+    :root{
+      --bg:#0f1115; --panel:#151821; --muted:#a9b0c0; --text:#e6e7ea;
+      --primary:#7aa2f7; --accent:#2dd4bf; --danger:#f87171; --ok:#34d399;
+      --border:#262a36;
+    }
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
+    }
+
+    .app{ display:flex; flex-direction:column; height:100vh; }
+    header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 18px; background:var(--panel); border-bottom:1px solid var(--border);
+    }
+
+    .title{ font-weight:700; font-size:18px; }
+
+    .content{ flex:1; overflow:auto; padding:18px; display:flex; justify-content:center; }
+    .chat{ width:100%; max-width:850px; display:flex; flex-direction:column; gap:14px; }
+
+    .msg{
+      border:1px solid var(--border); background:#0e1220;
+      border-radius:14px; padding:14px 16px;
+    }
+    .msg.user{ background:#0b1220; }
+    .msg.assistant{ background:#11182b; }
+
+    .msg .role{ font-weight:700; margin-bottom:6px; color:var(--primary); }
+    .msg pre{ white-space:pre-wrap; margin:0; }
+
+    .toolbar{
+      margin-top:10px; display:flex; gap:8px;
+    }
+
+    .btn{
+      padding:8px 12px; border-radius:8px;
+      cursor:pointer; font-weight:600;
+      border:1px solid var(--border); background:#1a2031;
+    }
+    .btn.ok{ color:var(--ok); }
+    .btn.danger{ color:var(--danger); }
+    .btn.ghost{ color:var(--muted); background:transparent; border:none; }
+
+    .composer{
+      background:var(--panel); padding:14px 16px; border-top:1px solid var(--border);
+    }
+    textarea{
+      flex:1; resize:none; min-height:60px;
+      padding:12px 14px; background:#0e1220; color:var(--text);
+      border:1px solid var(--border); border-radius:10px;
+    }
+
+    .api-bar{ color:var(--muted); font-size:12px; display:flex; gap:6px; align-items:center; }
+    input[type="text"]{
+      background:#0e1220; border:1px solid var(--border); color:var(--text);
+      padding:6px 8px; border-radius:8px; width:220px;
+    }
+
+    .toast{
+      position:fixed; bottom:16px; right:16px;
+      padding:10px 14px; background:#1f2937; color:#eee;
+      border-radius:10px; display:none;
+    }
+  </style>
+</head>
+
+<body>
+<div class="app">
+
+  <header>
+    <div>
+      <div class="title">Medical Resource Agent</div>
+    </div>
+
+    <div class="api-bar">
+      API:
+      <input id="apiBase" type="text" value="http://127.0.0.1:8000">
+      <span id="sessionBadge">session: –</span>
+    </div>
+  </header>
+
+  <div class="content">
+    <div id="chat" class="chat"></div>
+  </div>
+
+  <div class="composer">
+    <div style="display:flex; gap:10px; max-width:850px; margin:0 auto;">
+      <textarea id="input" placeholder="Ask a question…"></textarea>
+      <button id="sendBtn" class="btn">Send</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const chat = document.getElementById("chat");
+  const input = document.getElementById("input");
+  const sendBtn = document.getElementById("sendBtn");
+  const apiBaseEl = document.getElementById("apiBase");
+  const toast = document.getElementById("toast");
+  const sessionBadge = document.getElementById("sessionBadge");
+
+  let sessionId = localStorage.getItem("sess") || `s-${Math.random().toString(36).slice(2,9)}`;
+  localStorage.setItem("sess", sessionId);
+  sessionBadge.textContent = "session: " + sessionId;
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.style.display = "block";
+    setTimeout(()=> toast.style.display = "none", 2000);
+  }
+
+  function escapeHtml(str){
+    return str.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  }
+
+  // ✅ Global feedback function
+  async function sendFeedback(signal, comment, aiText, userQuery){
+    const payload = {
+      session_id: sessionId,
+      query: userQuery,
+      answer: aiText,
+      signal: signal,
+      comment: comment
+    };
+
+    try{
+      const base = apiBaseEl.value.replace(/\/+$/,'');
+      await fetch(base + "/feedback", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(payload)
+      });
+      showToast("Feedback saved ✅");
+    }catch(e){
+      console.error(e);
+      showToast("Feedback failed ❌");
+    }
+  }
+
+  function addMessage(role, text, userQuery=""){
+    const el = document.createElement("div");
+    el.className = "msg " + role;
+    el.innerHTML = `
+      <div class="role">${role === "user" ? "You" : "AI"}</div>
+      <pre>${escapeHtml(text)}</pre>
+    `;
+
+    if(role === "assistant"){
+      const tb = document.createElement("div");
+      tb.className = "toolbar";
+
+      tb.innerHTML = `
+  <button class="btn ok fb-btn" data-type="up">👍 Helpful</button>
+  <button class="btn danger fb-btn" data-type="down">👎 Not helpful</button>
+  <button class="btn ghost fb-comment-btn">Comment</button>
+`;
+
+
+      // ✅ Feedback bindings
+      tb.children[0].onclick = () =>
+        sendFeedback("up", "", text, userQuery);
+
+      tb.children[1].onclick = () =>
+        sendFeedback("down", prompt("What was wrong?") || "", text, userQuery);
+
+      tb.children[2].onclick = () =>
+        sendFeedback("up", prompt("Your comment:") || "", text, userQuery);
+
+      el.appendChild(tb);
+    }
+
+    chat.appendChild(el);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  async function sendMessage(){
+    const q = input.value.trim();
+    if(!q) return;
+
+    addMessage("user", q);
+    input.value = "";
+    sendBtn.disabled = true;
+    sendBtn.textContent = "...";
+
+    try{
+      const base = apiBaseEl.value.replace(/\/+$/,'');
+      const res = await fetch(base + "/chat", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ session_id: sessionId, message: q })
+      });
+
+      const data = await res.json();
+      addMessage("assistant", data.response, q);
+
+    }catch(e){
+      showToast("Server unreachable ❌");
+      console.error(e);
+    }
+
+    sendBtn.disabled = false;
+    sendBtn.textContent = "Send";
+  }
+
+  sendBtn.onclick = sendMessage;
+  input.onkeydown = (e)=>{
+    if(e.key === "Enter" && !e.shiftKey){
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  
+</script>
+</body>
+</html>
