@@ -1,220 +1,187 @@
-🏥 Medical Resource Allocation AI Agent
+# 🏥 Medical Resource Allocation AI Agent
 
-A hybrid AI system designed to forecast ICU/bed shortages, optimize patient transfers, and interact via an intelligent conversational agent. The system combines LLMs, RAG, deterministic logic, forecasting, and feedback-driven learning to support hospital decision-making.
+A **hybrid AI system** designed to forecast ICU/bed shortages, optimize patient transfers, and interact via an intelligent conversational agent.  
+The system combines **LLMs, RAG, deterministic logic, forecasting, and feedback-driven learning** to support hospital decision-making.
 
-✅ 1. Problem Approach
+---
+
+## ✅ 1. Problem Approach
 
 Hospitals often suffer from:
 
-ICU/bed imbalances
+- ICU/bed imbalances  
+- Staff shortages  
+- Uneven resource distribution across cities  
+- Lack of explainability behind transfer decisions  
 
-Staff shortages
+### 🔍 Our Solution
 
-Uneven resource distribution across cities
+A **hybrid AI approach** with four main components:
 
-Lack of explainability behind transfer decisions
-
-To solve this, the project uses a hybrid AI approach with four main components:
-
-Forecasting of ICU/bed shortages
-
-Optimization of patient transfers using cost-aware LP
-
-Conversational Agent that answers questions via:
-
-strict intent routing
-
-RAG retrieval
-
-LLM reasoning
-
-Adaptive Learning from user feedback (binary + comment-based)
+1. **Forecasting** of ICU/bed shortages  
+2. **Optimization** of patient transfers using cost-aware LP  
+3. **Conversational Agent** with:
+   - Strict intent routing  
+   - RAG retrieval  
+   - LLM reasoning  
+4. **Adaptive Learning** from user feedback (binary + comment-based)
 
 This ensures the system remains:
+> ✅ Accurate • ✅ Explainable • ✅ Non-hallucinatory • ✅ User-adaptive
 
-accurate
+---
 
-explainable
+## ✅ 2. Data Sources Used
 
-non-hallucinatory
+| File | Purpose |
+|------|----------|
+| `hospital_timeseries.csv` | 30-day bed/ICU/staff trends for each hospital |
+| `geo_costs.csv` | Pairwise hospital distances for optimizer |
+| `forecast_alerts.csv` | Forecast outputs with urgency scores |
+| `allocation_plan.csv` | Optimized transfer plan |
+| `ml_default_weights.json` | Adaptive ML weights (ICU/bed/staff importance) |
+| `faiss_index/` | Vector index for RAG retrieval |
+| `feedback.json` | User feedback history |
 
-user-adaptive
+📁 *All data is stored locally — no external APIs used.*
 
-✅ 2. Data Sources Used
-File	Purpose
-hospital_timeseries.csv	30-day bed/ICU/staff trends for each hospital
-geo_costs.csv	Pairwise hospital distances for optimizer
-forecast_alerts.csv	Forecast outputs with urgency scores
-allocation_plan.csv	Optimized transfer plan
-ml_default_weights.json	Adaptive ML weights (ICU/bed/staff importance)
-faiss_index/	Vector index for RAG retrieval
-feedback.json	User feedback history
+---
 
-All data is stored locally — no external APIs.
+## ✅ 3. Agent Architecture & Design Choices
 
-✅ 3. Agent Architecture & Design Choices
-✅ A. Intent Router (Zero Hallucination Layer)
+### 🧩 A. Intent Router (Zero Hallucination Layer)
 
-Rule-based classifier ensures structured queries go to deterministic handlers:
+A **rule-based classifier** routes structured queries to deterministic handlers:
 
-"list hospitals" → handler
+| Example Query | Routed To |
+|----------------|-----------|
+| “list hospitals” | list handler |
+| “highest urgency” | alert handler |
+| “ICU capacity of Pune” | ICU handler |
 
-"highest urgency" → handler
+> Prevents hallucinations and guarantees correctness.
 
-"ICU capacity of Pune" → handler
+---
 
-This prevents hallucination and guarantees correctness.
+### 📚 B. RAG Retrieval Layer
 
-✅ B. RAG Retrieval Layer
+Used for explanatory or analytical questions:
 
-For explanatory or analytical questions:
+- Retrieves relevant context from **FAISS**
+- Uses **MiniLM embeddings** for high recall
+- LLM answers **only** using retrieved context  
 
-Retrieves relevant context from FAISS
+➡️ Avoids hallucination in open-ended queries.
 
-MiniLM embeddings ensure high recall
+---
 
-LLM answers using only retrieved context
+### 🧠 C. LLM Reasoning Layer
 
-Avoids hallucination in open-ended queries.
+- Model: **Groq LLaMA-3 8B Instant**  
+- Used for: explanation, justification, natural summaries  
+- Generates responses **constrained by retrieved context**
 
-✅ C. LLM Reasoning Layer
+---
 
-LLM (Groq LLaMA-3 8B Instant) used for:
+### 🔁 D. Adaptive Learning Layer
 
-explanation
+Learns user preferences from:
 
-justification
+- ✅ Keywords in comments  
+- ✅ Helpful / Not Helpful feedback  
+- ✅ Session-specific patterns  
 
-chain-of-thought-style summaries
+Adapts:
+- ICU/bed/staff weight importance  
+- Response verbosity  
+- Reasoning detail  
 
-natural language generation
+> 🧩 Fulfills requirement:  
+> *“Agent must evolve understanding of user priorities without manual tuning.”*
 
-Always constrained by retrieved context.
+---
 
-✅ D. Adaptive Learning Layer
+## ✅ 4. Binary Feedback System (Helpful / Not Helpful)
 
-Learns user preferences based on:
+Users can react to every AI message:
 
-✅ Keywords in comments
-✅ Helpful / Not Helpful binary feedback
-✅ Session-specific patterns
+| Signal | Behavior |
+|---------|-----------|
+| ✅ Helpful | Agent replies shorter & more direct |
+| ❌ Not Helpful | Agent replies more detailed, step-by-step |
 
-Adjusts:
+Feedback is stored in `feedback.json` with timestamps.
 
-ICU/bed/staff weight importance
+### 💡 Why This Matters
 
-response verbosity
+Enables:
+- User preference learning  
+- Adaptive behavior  
+- Reasoning evolution  
+- Quantitative evaluation  
 
-reasoning detail
+And improves:
+> ✅ User modeling • ✅ Adaptive AI • ✅ Explainability • ✅ Continuous improvement
 
-This fulfills the project requirement:
+---
 
-“Agent must evolve understanding of user priorities without manual tuning.”
+## ✅ 5. Logic Behind Adaptive Learning & Reasoning
 
-✅ 4. Binary Feedback System (Helpful / Not Helpful)
-
-The user can react to each AI message:
-
-✅ Helpful
-
-❌ Not Helpful
-
-✅ What Happens When User Votes?
-Signal	Effect
-✅ Helpful	Agent replies shorter & more direct
-❌ Not Helpful	Agent replies more detailed, step-by-step
-
-Feedback is stored in feedback.json along with timestamps.
-
-✅ Why This Feature Matters
-
-It fulfills:
-
-user preference learning
-
-adaptive behavior
-
-reasoning evolution
-
-evaluation mechanism
-
-It also increases marks in:
-✅ User modeling
-✅ Adaptive AI
-✅ Explainability
-✅ System improvement over time
-
-✅ 5. Logic Behind Adaptive Learning & Reasoning
-✅ A. Weight Adaptation
+### ⚙️ A. Weight Adaptation
 
 User comments like:
+> “Focus on beds” or “ICU is more important”
 
-“focus on beds”
+→ Automatically shift weights in `ml_default_weights.json`  
+→ Alters urgency scores → affects optimizer → changes recommendations.
 
-“ICU is more important”
+---
 
-Automatically shift numerical weights stored in:
+### 💬 B. Response Style Adaptation
 
-ml_default_weights.json
+- More downvotes → more detailed explanations  
+- More upvotes → concise, focused replies  
 
+Demonstrates:
+> 🧠 Behavioral adaptation and user-centered design
 
-These weights influence urgency score calculation → influences optimizer → influences final recommendations.
+---
 
-✅ B. Response Style Adaptation
-
-More downvotes = more explanation
-More upvotes = concise answers
-
-This demonstrates:
-
-behavioral adaptation
-
-preference learning
-
-user-centered design
-
-✅ C. Hybrid Reasoning Design
+### 🔗 C. Hybrid Reasoning Design
 
 Combines:
-
-deterministic logic (for accuracy)
-
-LLM reasoning (for flexibility)
+- **Deterministic logic** (accuracy)
+- **LLM reasoning** (flexibility)
 
 Ensures:
+> ✅ Zero hallucination on structured tasks  
+> ✅ Natural, high-quality explanations
 
-zero hallucination on structured tasks
+---
 
-high-quality natural explanations
+## ⚠️ 6. Limitations
 
-✅ 6. Limitations
+- No real-time hospital APIs (CSV-based only)  
+- Intent detection is rule-based (not ML)  
+- FAISS may return irrelevant chunks for edge cases  
+- Session memory not yet persisted (no Redis)  
+- No streaming responses  
+- Weight learning is heuristic, not ML-based
 
-No real-time hospital APIs; only CSV-based
+---
 
-Intent detection rule-based, not ML-based
+## 🚀 7. Future Extensions
 
-FAISS may still produce irrelevant chunks for unusual queries
+Planned improvements:
+(I'm learning Langgraph)
+- ✅ Redis-based 10-min session memory  
+- ✅ ML-based intent classification  
+- ✅ LangGraph multi-agent roles  
+- ✅ Reinforcement learning for weight updates  
+- ✅ Real-time dashboards  
+- ✅ Integration with hospital APIs  
+- ✅ Streaming responses with Groq
 
-Session memory not yet persisted via Redis
+---
 
-No streaming responses
 
-Weight learning is heuristic-based, not ML-based
-
-✅ 7. Future Extensions
-
-These can be added easily later:
-
-✅ Redis-based 10-min session memory
-
-✅ ML-based intent classification
-
-✅ LangGraph multi-agent roles
-
-✅ Reinforcement learning for weight updates
-
-✅ Real-time dashboards
-
-✅ Integration with hospital APIs
-
-✅ Streaming responses with Groq
